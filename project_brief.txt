@@ -1,0 +1,476 @@
+PROJECT BRIEF
+Paycore is a Mini Fintech Wallet, Ledger, and Payment Infrastructure API
+
+Project Goal
+
+Build a recruiter-facing open source FastAPI project that looks and behaves like a simplified PalmPay, OPay, or wallet infrastructure backend.
+
+This should not be a basic CRUD wallet app.
+It should feel like real fintech infrastructure.
+
+The project must demonstrate:
+money movement integrity
+external payment gateway integration
+internal wallet transfers
+merchant payments
+outflows to bank accounts
+KYC and transaction controls
+auditing and webhook architecture
+production-minded backend engineering
+
+Core Product Story
+
+The platform is a digital wallet and merchant payment backend.
+
+Users can:
+create accounts
+complete KYC
+get a wallet
+fund their wallet from outside the system through Paystack sandbox
+send money to other users inside the platform
+pay merchants from their wallet
+withdraw money out of the platform to a bank account
+view transaction history
+
+Merchants can:
+create merchant profiles
+receive wallet payments from users
+get transaction webhooks
+view payment records
+use API keys for integration
+
+Admins can:
+review KYC submissions
+approve or reject KYC
+monitor transactions
+see audit logs
+flag suspicious transactions
+run reconciliation checks
+
+Main Real World Analogy
+
+This is a mini wallet infrastructure product similar to the backend patterns behind PalmPay, OPay, Moniepoint wallet systems, or a simplified Stripe wallet ledger core.
+
+It is not a full banking app.
+It is not just a Paystack wrapper.
+It is a wallet product with an internal accounting engine and external rails.
+
+Money Movement Model
+
+The platform must support three categories of money movement.
+
+1. Inflow into the system
+Money comes from outside into a user wallet.
+
+Flow:
+user starts wallet funding
+system initializes payment with Paystack sandbox
+Paystack confirms successful payment through webhook
+system verifies the event
+system credits user wallet
+transaction is marked completed
+ledger entries are recorded
+
+This proves:
+external payment integration
+webhook handling
+idempotency
+wallet crediting
+ledger-backed balance updates
+
+2. Internal flow inside the system
+Money moves between wallets within the platform.
+
+Examples:
+user to user transfer
+user to merchant payment
+
+Flow:
+user initiates transfer or merchant payment
+system validates sender balance
+system checks KYC level and limits
+system runs fraud checks
+system records debit and credit ledger entries
+system updates transaction status
+system emits internal events or notifications
+
+This proves:
+internal money movement
+ledger correctness
+transaction atomicity
+business rule enforcement
+
+3. Outflow from the system
+Money leaves the wallet and is sent out to a bank account.
+
+Flow:
+user adds and verifies bank account details
+user initiates withdrawal
+system validates balance and KYC
+system creates a pending withdrawal transaction
+background worker processes payout
+system calls Paystack transfer endpoint in sandbox or a mock payout processor
+system handles success or failure callback
+if successful, ledger entries are finalized
+if failed, reversal logic is applied and transaction marked failed
+audit logs are stored
+
+This proves:
+outbound payout handling
+async processing
+reversals
+financial state transitions
+realistic fintech workflow
+
+Important Design Principle
+
+Paystack is not the core product.
+Paystack is only the external rail for funding and optionally payouts.
+
+The main product value is the platform’s own wallet and ledger infrastructure.
+
+That means:
+funding uses Paystack
+withdrawal uses Paystack sandbox or a payout simulation
+wallet to wallet transfer is internal
+wallet to merchant payment is internal
+
+This is very important.
+The project must not look like a thin wrapper around Paystack APIs.
+
+Main Modules to Build
+
+1. Authentication and User Management
+User registration
+Login
+JWT auth
+Role support if needed for admin and merchant access
+
+2. KYC Module
+Basic KYC tiering system
+
+Suggested levels:
+Tier 0: email only
+Tier 1: basic profile and phone verification
+Tier 2: ID upload and admin approval
+
+KYC should affect:
+daily transfer limits
+wallet funding limits if needed
+withdrawal limits
+ability to withdraw at all
+
+KYC should include:
+submission endpoint
+document upload handling
+status tracking
+admin approval or rejection
+
+3. Wallet Module
+Each user gets a wallet
+Wallet supports one currency for MVP, preferably NGN
+Balance should be derived from ledger entries or maintained with strict ledger synchronization
+Wallet statement and transaction history endpoints should exist
+
+4. Ledger Module
+This is the core accounting engine
+
+Use double-entry logic:
+every completed money movement must create matching debit and credit entries
+
+The ledger should support:
+wallet funding entries
+wallet to wallet transfer entries
+merchant payment entries
+withdrawal entries
+reversal entries
+
+This is one of the strongest technical signals in the project.
+
+5. Transaction Module
+Support transaction types such as:
+funding
+transfer
+merchant_payment
+withdrawal
+reversal
+
+Each transaction should have:
+reference
+status
+amount
+currency
+source wallet or account
+destination wallet or account
+provider reference if applicable
+idempotency key if needed
+timestamps
+
+Statuses may include:
+pending
+processing
+completed
+failed
+reversed
+
+6. Merchant Module
+Allow merchant registration
+Merchant wallet creation
+Merchant API key generation
+Merchant payment request creation if desired
+Webhook subscription support
+Payment history endpoint
+
+Merchant payment flow:
+user pays merchant from wallet
+user wallet is debited
+merchant wallet is credited
+merchant webhook is queued and delivered
+
+7. Paystack Integration Module
+Use Paystack sandbox for:
+wallet funding initialization
+payment verification
+webhook handling
+possibly payouts or transfer simulation
+
+Key responsibilities:
+initialize transactions
+verify transactions
+receive and validate webhooks
+deduplicate webhook processing
+map provider events to internal transaction state
+
+8. Bank Account and Withdrawal Module
+Users can add bank account information
+Optionally verify account name through provider or mock
+Users initiate withdrawal requests
+System validates eligibility
+Withdrawal is processed asynchronously
+Final success or failure is reflected in ledger and transaction records
+
+9. Fraud and Risk Controls
+Basic but realistic checks
+
+Examples:
+maximum transaction amount by KYC tier
+maximum daily transfer volume
+frequency limit for repeated transfers
+block suspicious rapid withdrawals
+flag duplicate transfer attempts
+merchant payment anomaly check
+
+The goal is not advanced fraud intelligence.
+The goal is to show business rule enforcement and risk awareness.
+
+10. Webhook Module
+Outgoing webhook delivery for merchants
+Incoming webhook processing for Paystack
+
+Must support:
+webhook event storage
+delivery attempts
+retries
+signature verification where relevant
+status tracking
+
+11. Audit Log Module
+Every important action should be auditable.
+
+Examples:
+KYC submitted
+KYC approved
+wallet funded
+transfer made
+withdrawal initiated
+withdrawal failed
+merchant created
+API key generated
+admin action taken
+
+Each log should include:
+actor
+action
+target object
+metadata
+timestamp
+
+12. Background Jobs
+Use Celery or another queue system with Redis
+
+Use background jobs for:
+webhook delivery
+withdrawal processing
+fraud checks
+email or notification tasks if added
+reconciliation jobs
+
+Main Functional Flows
+
+Flow 1: Wallet funding through Paystack
+user requests wallet funding
+system initializes Paystack transaction
+transaction record created as pending
+Paystack webhook arrives on success
+system verifies event and idempotency
+wallet is credited
+ledger entries are created
+transaction status becomes completed
+audit log is stored
+
+Flow 2: Wallet to wallet transfer
+sender initiates transfer to recipient
+system validates sender balance
+system checks transfer limits and KYC
+system creates transaction
+system posts corresponding debit and credit ledger entries atomically
+transaction becomes completed
+audit log is stored
+
+Flow 3: User pays merchant
+merchant exists with wallet and API key
+user initiates merchant payment
+system validates sender wallet and rules
+system debits user wallet
+system credits merchant wallet
+transaction completed
+merchant webhook queued
+audit log stored
+
+Flow 4: Withdrawal to bank account
+user submits withdrawal request
+system validates KYC and available balance
+system creates pending withdrawal transaction
+job queue processes payout
+provider success leads to final debit and completion
+provider failure leads to failure handling or reversal
+audit log stored
+
+Flow 5: KYC submission and approval
+user submits KYC details and document
+system stores submission
+admin reviews
+admin approves or rejects
+user KYC level changes
+limits and permissions update automatically
+
+Recommended MVP Scope
+
+The MVP must include:
+authentication
+users
+wallets
+KYC
+Paystack wallet funding
+wallet to wallet transfer
+merchant payments
+withdrawal outflow
+double-entry ledger
+transactions
+webhooks
+audit logs
+background jobs
+basic fraud checks
+
+Optional extras if time allows:
+bank account verification
+transaction reversal endpoint
+reconciliation report
+admin dashboard endpoints
+email notifications
+rate limiting
+multi-currency support
+merchant invoice links
+
+Technical Stack
+
+Backend:
+FastAPI
+
+Database:
+PostgreSQL
+
+Queue and background jobs:
+Redis
+Celery
+
+ORM and migrations:
+SQLAlchemy
+Alembic
+
+Auth:
+JWT
+
+Infra:
+Docker
+Docker Compose
+
+Suggested high level structure:
+app/api
+app/models
+app/schemas
+app/services
+app/repositories
+app/integrations
+app/workers
+app/core
+app/utils
+
+Important Engineering Expectations
+
+The project should demonstrate:
+clear service layer separation
+clean schema design
+constraints and indexes
+database transactions
+row locking or concurrency awareness where necessary
+idempotency support for sensitive operations
+failure-safe webhook handling
+production-minded README and setup
+
+What Recruiters Should Understand Immediately
+
+When a recruiter opens the repository, they should quickly understand that this project is:
+
+a mini wallet and payment backend
+integrated with Paystack for inflow and payout rail simulation
+built with an internal double-entry ledger
+capable of internal transfers, merchant payments, and outflows
+designed with KYC, audit logs, async jobs, and webhook processing
+
+Naming Direction
+
+Possible repository names:
+paycore
+ledgepay
+kashflow-api
+wallet-infrastructure-api
+fincore
+wallet-ledger-api
+
+Best title style:
+PayCore: A Wallet and Ledger Infrastructure API
+or
+KashFlow API: A Mini Wallet and Merchant Payments Backend
+
+Non Goals for MVP
+
+Do not build:
+full card issuing
+real interbank settlement complexity
+full compliance engine
+FX or multi-country rails
+loan systems
+investment systems
+advanced dispute handling
+
+The MVP should stay focused and believable.
+
+Final Summary
+
+This project is a simplified fintech wallet backend with real-world money flow patterns.
+
+It uses Paystack sandbox as the external payment and payout rail.
+It supports inflow into wallets, internal money movement, and outflow to bank accounts.
+It includes KYC, merchant payments, a ledger engine, audit logs, webhooks, and background workers.
+It should feel like a serious backend system that proves the developer understands real fintech architecture and stateful money movement.
