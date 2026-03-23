@@ -38,7 +38,7 @@ class KYCSubmission(Base, TimestampMixin):
     )
     requested_tier: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     status: Mapped[KYCStatus] = mapped_column(
-        Enum(KYCStatus, name="kycstatus", create_type=True),
+        Enum(KYCStatus, name="kycstatus", create_type=False, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=KYCStatus.PENDING,
         index=True,

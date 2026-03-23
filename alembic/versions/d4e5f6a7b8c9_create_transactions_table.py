@@ -34,7 +34,7 @@ def upgrade() -> None:
         sa.Column("reference", sa.String(50), nullable=False),
         sa.Column(
             "type",
-            sa.Enum(
+            postgresql.ENUM(
                 "funding",
                 "transfer",
                 "merchant_payment",
@@ -47,7 +47,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "status",
-            sa.Enum(
+            postgresql.ENUM(
                 "pending",
                 "processing",
                 "completed",

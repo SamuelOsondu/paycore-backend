@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import (
@@ -121,35 +122,50 @@ class MerchantPaymentService:
         payer_balance_after = locked_payer.balance - amount
         merchant_balance_after = locked_merchant.balance + amount
 
-        # Write transaction record
-        txn = await self._txn_repo.create(
-            reference=f"txn_{uuid.uuid4().hex[:12]}",
-            type=TransactionType.MERCHANT_PAYMENT,
-            status=TransactionStatus.COMPLETED,
-            amount=amount,
-            currency=locked_payer.currency,
-            source_wallet_id=locked_payer.id,
-            destination_wallet_id=locked_merchant.id,
-            initiated_by_user_id=payer.id,
-            idempotency_key=idempotency_key,
-        )
+        # Write transaction record, ledger entries, and balance updates atomically.
+        # The idempotency_key column has a DB-level unique constraint, so if two
+        # concurrent requests both slip past the pre-check above, the second flush
+        # will raise IntegrityError.  We catch it, rollback, and return the already-
+        # committed transaction — giving the caller the correct idempotent response.
+        try:
+            txn = await self._txn_repo.create(
+                reference=f"txn_{uuid.uuid4().hex[:12]}",
+                type=TransactionType.MERCHANT_PAYMENT,
+                status=TransactionStatus.COMPLETED,
+                amount=amount,
+                currency=locked_payer.currency,
+                source_wallet_id=locked_payer.id,
+                destination_wallet_id=locked_merchant.id,
+                initiated_by_user_id=payer.id,
+                idempotency_key=idempotency_key,
+            )
 
-        # Write double-entry ledger entries
-        await self._ledger.post_double_entry(
-            transaction_id=txn.id,
-            debit_wallet_id=locked_payer.id,
-            credit_wallet_id=locked_merchant.id,
-            amount=amount,
-            currency=locked_payer.currency,
-            debit_balance_after=payer_balance_after,
-            credit_balance_after=merchant_balance_after,
-        )
+            # Write double-entry ledger entries
+            await self._ledger.post_double_entry(
+                transaction_id=txn.id,
+                debit_wallet_id=locked_payer.id,
+                credit_wallet_id=locked_merchant.id,
+                amount=amount,
+                currency=locked_payer.currency,
+                debit_balance_after=payer_balance_after,
+                credit_balance_after=merchant_balance_after,
+            )
 
-        # Update wallet balances
-        await self._wallet_repo.update_balance(locked_payer, payer_balance_after)
-        await self._wallet_repo.update_balance(locked_merchant, merchant_balance_after)
+            # Update wallet balances
+            await self._wallet_repo.update_balance(locked_payer, payer_balance_after)
+            await self._wallet_repo.update_balance(locked_merchant, merchant_balance_after)
 
-        await self.session.commit()
+            await self.session.commit()
+
+        except IntegrityError:
+            await self.session.rollback()
+            # Another concurrent request with the same idempotency_key committed
+            # first.  Fetch and return that transaction.
+            if idempotency_key:
+                existing = await self._txn_repo.get_by_idempotency_key(idempotency_key)
+                if existing is not None:
+                    return existing
+            raise
 
         # ── Post-commit operations (non-blocking, best-effort) ──────────────
 

@@ -45,7 +45,7 @@ class LedgerEntry(Base):
         index=True,
     )
     entry_type: Mapped[EntryType] = mapped_column(
-        Enum(EntryType, name="entrytype", create_type=True),
+        Enum(EntryType, name="entrytype", create_type=False, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(20, 2), nullable=False)

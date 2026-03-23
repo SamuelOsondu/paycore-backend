@@ -28,7 +28,7 @@ def upgrade() -> None:
         sa.Column("full_name", sa.String(255), nullable=False),
         sa.Column(
             "role",
-            sa.Enum("user", "merchant", "admin", name="userrole", create_type=False),
+            postgresql.ENUM("user", "merchant", "admin", name="userrole", create_type=False),
             nullable=False,
             server_default="user",
         ),

@@ -45,7 +45,7 @@ class WebhookDelivery(Base, TimestampMixin):
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
     status: Mapped[WebhookDeliveryStatus] = mapped_column(
-        Enum(WebhookDeliveryStatus, name="webhookdeliverystatus", create_type=True),
+        Enum(WebhookDeliveryStatus, name="webhookdeliverystatus", create_type=False, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=WebhookDeliveryStatus.PENDING,
         index=True,

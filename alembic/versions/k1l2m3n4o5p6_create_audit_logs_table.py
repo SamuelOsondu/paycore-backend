@@ -42,7 +42,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "actor_type",
-            sa.Enum("user", "system", "admin", name="actortype", create_type=False),
+            postgresql.ENUM("user", "system", "admin", name="actortype", create_type=False),
             nullable=False,
         ),
         sa.Column("action", sa.String(100), nullable=False),

@@ -37,7 +37,7 @@ class AuditLog(Base):
         UUID(as_uuid=True), nullable=True, index=True
     )
     actor_type: Mapped[ActorType] = mapped_column(
-        Enum(ActorType, name="actortype", create_type=True),
+        Enum(ActorType, name="actortype", create_type=False, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     )
     # Dot-separated action name, e.g. "kyc.approved", "transfer.completed"

@@ -29,7 +29,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="userrole", create_type=True),
+        Enum(UserRole, name="userrole", create_type=False, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=UserRole.USER,
         index=True,

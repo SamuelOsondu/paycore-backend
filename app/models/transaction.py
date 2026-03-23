@@ -62,12 +62,12 @@ class Transaction(Base, TimestampMixin):
         String(50), unique=True, nullable=False, index=True
     )
     type: Mapped[TransactionType] = mapped_column(
-        Enum(TransactionType, name="transactiontype", create_type=True),
+        Enum(TransactionType, name="transactiontype", create_type=False, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         index=True,
     )
     status: Mapped[TransactionStatus] = mapped_column(
-        Enum(TransactionStatus, name="transactionstatus", create_type=True),
+        Enum(TransactionStatus, name="transactionstatus", create_type=False, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=TransactionStatus.PENDING,
         index=True,

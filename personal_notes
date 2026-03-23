@@ -1,2 +1,34 @@
 the db passwords on the docker compose
 
+the register that's there needs to pass through the email sending and verification loop.
+
+user-enumeration.
+token-existence oracle attacks.
+
+session.execute(
+            select(Wallet).where(
+                Wallet.id == wallet_id,
+                Wallet.deleted_at.is_(None),
+
+
+hows the concurrency locking enforced across transactions?
+
+
+Spoofing is a cyberattack where a fraudster disguises themselves as a trusted source—via email, phone, website, or IP address—to steal information, money, or bypass security.
+
+how's the idempotency used?
+
+two transactions have to be creaeted now? How's it created then?
+at whhat point, I only see one.
+
+ledger does what particularly, same with the audit?
+what's the merchant api keys used for though.
+
+
+hows migrations created and how's migrate done on this guy.
+
+how to run tests here.
+
+alembic init alembic
+alembic revision --autogenerate -m "description"
+alembic upgrade head
