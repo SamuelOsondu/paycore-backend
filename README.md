@@ -1,5 +1,9 @@
 # PayCore — Fintech Wallet Backend
 
+![Tests](https://github.com/your-username/paycore-backend/actions/workflows/test.yml/badge.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.12-blue.svg)
+
 A production-grade async REST API for a digital wallet platform. Built with FastAPI, PostgreSQL, Celery, and Redis. Handles wallet funding via Paystack, peer-to-peer transfers, merchant payments, KYC verification, fraud detection, and automated reconciliation — all backed by a double-entry ledger.
 
 ---
@@ -144,7 +148,7 @@ paycore-backend/
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/your-username/paycore-backend.git
+git clone https://github.com/SamuelOsondu/paycore-backend.git
 cd paycore-backend
 cp .env.example .env
 # Edit .env — at minimum set SECRET_KEY, PAYSTACK_SECRET_KEY, and AWS credentials
