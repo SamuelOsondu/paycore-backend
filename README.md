@@ -1,6 +1,5 @@
 # PayCore — Fintech Wallet Backend
 
-![Tests](https://github.com/your-username/paycore-backend/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue.svg)
 
@@ -17,7 +16,6 @@ A production-grade async REST API for a digital wallet platform. Built with Fast
 - [Getting Started](#getting-started)
 - [Environment Variables](#environment-variables)
 - [Running Migrations](#running-migrations)
-- [Running Tests](#running-tests)
 - [API Reference](#api-reference)
 - [Background Workers](#background-workers)
 - [Database Schema](#database-schema)
@@ -55,7 +53,6 @@ A production-grade async REST API for a digital wallet platform. Built with Fast
 | File storage | AWS S3 (KYC documents) |
 | Rate limiting | SlowAPI |
 | Validation | Pydantic v2 |
-| Testing | pytest-asyncio + httpx AsyncClient |
 | Containerisation | Docker + Docker Compose |
 
 ---
@@ -127,9 +124,6 @@ paycore-backend/
 │   ├── integrations/     # External clients (Paystack, S3)
 │   └── workers/          # Celery tasks + beat schedule
 ├── alembic/              # Database migrations (11 versions)
-├── tests/
-│   ├── api/              # Integration tests (14 files, ~350 tests)
-│   └── unit/             # Unit tests (6 files, ~80 tests)
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
@@ -198,7 +192,6 @@ Copy `.env.example` to `.env` and fill in the values.
 | `SECRET_KEY` | JWT signing secret (use a long random string in production) |
 | `DATABASE_URL` | Async PostgreSQL URL (`postgresql+asyncpg://...`) |
 | `SYNC_DATABASE_URL` | Sync PostgreSQL URL for Alembic (`postgresql+psycopg2://...`) |
-| `TEST_DATABASE_URL` | Separate database used by pytest |
 | `REDIS_URL` | Redis connection string |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | JWT access token TTL (default: 30) |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token TTL (default: 1) |
@@ -229,48 +222,6 @@ alembic revision --autogenerate -m "describe the change"
 # Roll back one version
 alembic downgrade -1
 ```
-
----
-
-## Running Tests
-
-Tests use a dedicated PostgreSQL database (`TEST_DATABASE_URL`) and run fully in-process using `pytest-asyncio` with savepoint-based test isolation (no truncation between tests — changes are rolled back via the outer transaction).
-
-```bash
-# All tests
-pytest
-
-# With coverage report
-pytest --cov=app --cov-report=term-missing
-
-# A specific file
-pytest tests/api/test_admin.py -v
-
-# A specific test
-pytest tests/api/test_transfer_api.py::test_transfer_insufficient_balance -v
-```
-
-**Test counts by component:**
-
-| Component | Tests |
-|---|---|
-| Auth | 33 |
-| Users | — |
-| Wallets | 29 |
-| Transactions | 37 |
-| Ledger (unit) | 15 |
-| Fraud (unit) | 22 |
-| KYC | 28 |
-| Transfers | 16 |
-| Merchants | 16 |
-| Merchant Payments | 14 |
-| Paystack | 14 |
-| Withdrawals | 21 |
-| Outgoing Webhooks | 20 |
-| Audit | 24 |
-| Workers | 17 |
-| Admin | 38 |
-| **Total** | **~400** |
 
 ---
 
@@ -533,5 +484,4 @@ Direct `PENDING → FAILED` is not allowed — reconciliation always transitions
 | `metadata_` attribute alias for audit log | Avoids shadowing SQLAlchemy's `Base.metadata` class attribute |
 | Sync engine for Alembic only | Migrations run as CLI commands; sync is simpler and fully compatible with asyncpg at runtime |
 | Deferred imports in Celery tasks | Prevents circular imports at worker startup; tasks import services and clients inside function bodies |
-| Savepoint-based test isolation | `BEGIN → savepoint per test → rollback` avoids slow truncation between tests and works with async commits inside services |
 | `MOCK_PAYOUT=true` flag | Allows full end-to-end withdrawal testing in development without real Paystack payout calls |
